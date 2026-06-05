@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proceso de Facturación · Experis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#00C264;
+    --green-bright:#3DDC84;
+    --green-deep:#009A4E;
+    --ink:#0B0E0C;
+    --ink-soft:#131714;
+    --paper:#FFFFFF;
+    --paper-dim:#F4F6F4;
+    --gray:#6B7670;
+    --line:#E4E8E5;
+    --display:'Bricolage Grotesque', serif;
+    --body:'Manrope', sans-serif;
+    --mono:'JetBrains Mono', monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+
+  /* ===== Deck container ===== */
+  #deck{position:fixed;inset:0;}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:clamp(2.5rem,6vw,7rem);
+    opacity:0;visibility:hidden;
+    transform:scale(1.02);
+    transition:opacity .55s ease, transform .55s ease, visibility .55s;
+    overflow:hidden;
+  }
+  .slide.active{opacity:1;visibility:visible;transform:scale(1);z-index:2}
+  .slide.past{transform:scale(.985)}
+
+  /* ===== Themes ===== */
+  .dark{background:var(--ink);color:var(--paper)}
+  .light{background:var(--paper);color:var(--ink)}
+  .dark::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(900px 600px at 85% 10%, rgba(0,194,100,.16), transparent 60%),
+      radial-gradient(700px 500px at 10% 95%, rgba(0,154,78,.12), transparent 60%);
+  }
+  .slide::after{ /* subtle grain */
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ===== Reveal animation ===== */
+  .slide.active .reveal{animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+  .slide.active .reveal:nth-child(1){animation-delay:.05s}
+  .slide.active .reveal:nth-child(2){animation-delay:.13s}
+  .slide.active .reveal:nth-child(3){animation-delay:.21s}
+  .slide.active .reveal:nth-child(4){animation-delay:.29s}
+  @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ===== Cover ===== */
+  .brand{display:flex;align-items:center;gap:.7rem;font-family:var(--mono);
+    font-weight:700;letter-spacing:.22em;font-size:.78rem;text-transform:uppercase;color:var(--green-bright)}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--green);box-shadow:0 0 18px var(--green)}
+  .cover-kicker{margin-top:auto}
+  .cover h1{
+    font-family:var(--display);font-weight:800;line-height:.96;letter-spacing:-.02em;
+    font-size:clamp(3rem,8.5vw,8rem);margin:1.5rem 0 1.2rem;max-width:16ch;
+  }
+  .cover h1 em{font-style:normal;color:var(--green-bright)}
+  .cover .sub{font-size:clamp(1.05rem,2vw,1.55rem);color:#C9D2CC;max-width:42ch;font-weight:500}
+  .cover-foot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;
+    font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;color:#8A958E;text-transform:uppercase}
+
+  /* ===== Chapter divider ===== */
+  .chapter{justify-content:center}
+  .chapter .num{
+    font-family:var(--mono);font-weight:700;font-size:clamp(1rem,2vw,1.3rem);
+    color:var(--green-bright);letter-spacing:.2em;display:flex;align-items:center;gap:1rem;
+  }
+  .chapter .num::before{content:"";width:clamp(40px,6vw,90px);height:2px;background:var(--green)}
+  .chapter h2{
+    font-family:var(--display);font-weight:800;line-height:.98;letter-spacing:-.02em;
+    font-size:clamp(2.6rem,7.5vw,6.6rem);margin:1.4rem 0;max-width:15ch;
+  }
+  .chapter .ghost{
+    position:absolute;right:clamp(1rem,3vw,4rem);bottom:clamp(-2rem,-3vw,-1rem);
+    font-family:var(--display);font-weight:800;font-size:clamp(14rem,38vw,34rem);
+    line-height:.7;color:rgba(255,255,255,.04);pointer-events:none;z-index:0;
+  }
+  .chapter .inner{position:relative;z-index:1}
+  .chapter .tag{font-family:var(--mono);font-size:.8rem;letter-spacing:.18em;
+    text-transform:uppercase;color:#8A958E}
+
+  /* ===== Content slide ===== */
+  .content .eyebrow{font-family:var(--mono);font-weight:700;font-size:.78rem;
+    letter-spacing:.2em;text-transform:uppercase;color:var(--green-deep);display:flex;align-items:center;gap:.6rem}
+  .content .eyebrow .pin{width:9px;height:9px;background:var(--green);border-radius:2px}
+  .content h3{font-family:var(--display);font-weight:700;letter-spacing:-.02em;
+    font-size:clamp(1.9rem,4.4vw,3.4rem);line-height:1.02;margin:.7rem 0 2.2rem;max-width:24ch}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1rem,2.4vw,2rem)}
+  .card{
+    background:var(--paper);border:1px solid var(--line);border-radius:18px;
+    padding:clamp(1.2rem,2.2vw,1.9rem);position:relative;overflow:hidden;
+    transition:transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s, border-color .35s;
+  }
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;
+    background:var(--green);transform:scaleY(0);transform-origin:top;transition:transform .4s ease}
+  .card:hover{transform:translateY(-6px);box-shadow:0 22px 50px -28px rgba(0,154,78,.6);border-color:var(--green)}
+  .card:hover::before{transform:scaleY(1)}
+  .card .ico{
+    width:46px;height:46px;border-radius:12px;background:rgba(0,194,100,.12);
+    display:flex;align-items:center;justify-content:center;margin-bottom:1rem;
+  }
+  .card .ico svg{width:24px;height:24px;stroke:var(--green-deep);fill:none;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  .card h4{font-family:var(--display);font-weight:700;font-size:clamp(1.05rem,1.7vw,1.32rem);
+    line-height:1.15;margin-bottom:.5rem;color:var(--ink)}
+  .card p{font-size:clamp(.86rem,1.15vw,.98rem);line-height:1.5;color:var(--gray);font-weight:500}
+
+  /* indicator slide variant: codes */
+  .card .code{position:absolute;top:1rem;right:1.2rem;font-family:var(--mono);
+    font-weight:700;font-size:.78rem;color:var(--green);letter-spacing:.08em}
+
+  /* ===== Navigation UI ===== */
+  .progress{position:fixed;top:0;left:0;height:3px;background:var(--green);z-index:50;
+    width:0;box-shadow:0 0 12px var(--green);transition:width .45s ease}
+  .nav{position:fixed;bottom:1.4rem;right:1.6rem;z-index:50;display:flex;gap:.5rem;align-items:center}
+  .nav button{
+    width:44px;height:44px;border-radius:50%;border:1px solid rgba(125,135,128,.4);
+    background:rgba(20,23,20,.55);backdrop-filter:blur(8px);color:#fff;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:.25s;
+  }
+  .light-ui .nav button{background:rgba(255,255,255,.7);color:var(--ink);border-color:var(--line)}
+  .nav button:hover{background:var(--green);border-color:var(--green);color:#04130b;transform:scale(1.06)}
+  .nav button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .counter{position:fixed;bottom:1.7rem;left:1.7rem;z-index:50;font-family:var(--mono);
+    font-size:.82rem;letter-spacing:.1em;color:#8A958E}
+  .counter .cur{color:var(--green-bright);font-weight:700}
+  .light-ui .counter{color:var(--gray)}
+  .light-ui .counter .cur{color:var(--green-deep)}
+
+  .dots{position:fixed;top:50%;right:1.1rem;transform:translateY(-50%);z-index:50;
+    display:flex;flex-direction:column;gap:.55rem}
+  .dots span{width:8px;height:8px;border-radius:50%;background:rgba(125,135,128,.35);cursor:pointer;transition:.25s}
+  .dots span.on{background:var(--green);transform:scale(1.4);box-shadow:0 0 10px var(--green)}
+  .light-ui .dots span{background:rgba(0,0,0,.18)}
+  .light-ui .dots span.on{background:var(--green-deep)}
+
+  .hint{position:fixed;bottom:1.7rem;left:50%;transform:translateX(-50%);z-index:50;
+    font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;color:#8A958E;
+    text-transform:uppercase;opacity:.8;animation:fade 4s ease forwards}
+  @keyframes fade{0%,70%{opacity:.8}100%{opacity:0;visibility:hidden}}
+
+  /* click zones */
+  .zone{position:fixed;top:0;bottom:0;width:18%;z-index:20;cursor:pointer}
+  .zone.l{left:0}.zone.r{right:0}
+
+  @media (max-width:760px){
+    .grid{grid-template-columns:1fr;gap:.8rem}
+    .card{border-radius:14px}
+    .dots{display:none}
+    .slide{padding:2rem 1.4rem 5rem}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="bar"></div>
+
+<div id="deck">
+
+  <!-- 1 · COVER -->
+  <section class="slide dark active" data-theme="dark">
+    <div class="reveal brand cover-kicker"><span class="dot"></span>Experis · Área de Facturación</div>
+    <h1 class="reveal cover">Proceso de <em>Facturación</em> en Experis</h1>
+    <p class="reveal sub">Pasos clave para una facturación eficiente y precisa.</p>
+    <div class="reveal cover-foot">
+      <span>Presentación ejecutiva</span>
+      <span>01 — 13</span>
+    </div>
+  </section>
+
+  <!-- 2 · CHAPTER -->
+  <section class="slide dark chapter" data-theme="dark">
+    <div class="ghost">01</div>
+    <div class="inner">
+      <div class="reveal num">Capítulo 01</div>
+      <h2 class="reveal">Introducción al Área de Facturación</h2>
+      <div class="reveal tag">Objetivo y contexto general</div>
+    </div>
+  </section>
+
+  <!-- 3 · CONTENT -->
+  <section class="slide light content" data-theme="light">
+    <div class="reveal eyebrow"><span class="pin"></span>Introducción</div>
+    <h3 class="reveal">Objetivo de la presentación y contexto general</h3>
+    <div class="grid">
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12h18M12 3v18M5 7l14 10M19 7L5 17"/></svg></div>
+        <h4>Rol estratégico de facturación</h4>
+        <p>La facturación es un puente clave entre áreas comerciales, operativas y financieras para la sostenibilidad del negocio.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg></div>
+        <h4>Procesos de facturación</h4>
+        <p>Incluye creación de clientes, procesamiento de información y análisis financiero para asegurar precisión y comunicación.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></div>
+        <h4>Impacto en resultados financieros</h4>
+        <p>Errores o retrasos en facturación afectan directamente el flujo de caja y la rentabilidad empresarial.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M5 20V9M12 20V4M19 20v-7"/></svg></div>
+        <h4>Indicadores financieros clave</h4>
+        <p>Conceptos como WIP, DSO y provisiones impactan la gestión comercial y operativa de forma integral.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · CHAPTER -->
+  <section class="slide dark chapter" data-theme="dark">
+    <div class="ghost">02</div>
+    <div class="inner">
+      <div class="reveal num">Capítulo 02</div>
+      <h2 class="reveal">Rol del Equipo de Facturación</h2>
+      <div class="reveal tag">Responsabilidades y valor para el negocio</div>
+    </div>
+  </section>
+
+  <!-- 5 · CONTENT -->
+  <section class="slide light content" data-theme="light">
+    <div class="reveal eyebrow"><span class="pin"></span>Rol del Equipo</div>
+    <h3 class="reveal">Responsabilidades y valor para el negocio</h3>
+    <div class="grid">
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h4>Validación de información comercial</h4>
+        <p>El equipo asegura que los datos del cliente y las condiciones contractuales sean precisos para evitar errores y conflictos.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="5"/></svg></div>
+        <h4>Gestión del ciclo de facturación</h4>
+        <p>Se administra todo el proceso desde prefacturas hasta documentos electrónicos, garantizando cumplimiento legal y tributario.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-3 3 2 5-6"/></svg></div>
+        <h4>Análisis financiero post-facturación</h4>
+        <p>El equipo revisa informes de utilidades y rentabilidad para identificar desviaciones y oportunidades de mejora.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v6c0 5 9 9 9 9s9-4 9-9V7z"/></svg></div>
+        <h4>Valor para el negocio</h4>
+        <p>Aseguran orden, control y transparencia financiera, permitiendo que otras áreas se enfoquen en generar negocio.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · CHAPTER -->
+  <section class="slide dark chapter" data-theme="dark">
+    <div class="ghost">03</div>
+    <div class="inner">
+      <div class="reveal num">Capítulo 03</div>
+      <h2 class="reveal">Creación de Clientes</h2>
+      <div class="reveal tag">Proceso y documentos requeridos</div>
+    </div>
+  </section>
+
+  <!-- 7 · CONTENT -->
+  <section class="slide light content" data-theme="light">
+    <div class="reveal eyebrow"><span class="pin"></span>Creación de Clientes</div>
+    <h3 class="reveal">Proceso y documentos requeridos</h3>
+    <div class="grid">
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+        <h4>Importancia de la creación de clientes</h4>
+        <p>La correcta creación de clientes es esencial para emitir facturas y analizar resultados financieros confiables.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div>
+        <h4>Documentos clave requeridos</h4>
+        <p>Se requieren cuatro documentos: formato de entrega, contrato firmado, RUT y estructura de costos para completar el proceso.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M8 7h8M8 11h8M8 15h4"/><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m15 19 2 2 4-4"/></svg></div>
+        <h4>Contrato firmado</h4>
+        <p>El contrato legal respalda la relación comercial y detalla condiciones como tarifas y plazos de pago.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+        <h4>Cumplimiento tributario y rentabilidad</h4>
+        <p>El RUT garantiza identificación tributaria correcta y la estructura de costos ayuda a analizar la rentabilidad.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · CHAPTER -->
+  <section class="slide dark chapter" data-theme="dark">
+    <div class="ghost">04</div>
+    <div class="inner">
+      <div class="reveal num">Capítulo 04</div>
+      <h2 class="reveal">Procesamiento de la Factura</h2>
+      <div class="reveal tag">Generación de documentos y soportes</div>
+    </div>
+  </section>
+
+  <!-- 9 · CONTENT -->
+  <section class="slide light content" data-theme="light">
+    <div class="reveal eyebrow"><span class="pin"></span>Procesamiento de la Factura</div>
+    <h3 class="reveal">Generación de documentos y soportes</h3>
+    <div class="grid">
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <h4>Proceso de facturación preciso</h4>
+        <p>La facturación requiere precisión y validación para asegurar un flujo de caja efectivo en la empresa.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h3"/></svg></div>
+        <h4>Documentos electrónicos legales</h4>
+        <p>Los documentos electrónicos deben cumplir requisitos legales y reflejar fielmente acuerdos contractuales y costos.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h12"/><circle cx="20" cy="18" r="2"/></svg></div>
+        <h4>Prefacturas para validación</h4>
+        <p>Las prefacturas ayudan a validar montos y conceptos con áreas comerciales y clientes para evitar errores.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><path d="M8 9l2 2 4-4"/></svg></div>
+        <h4>Soportes de facturación claros</h4>
+        <p>Reportes y actas respaldan la factura, agilizando la aprobación y reduciendo los tiempos de pago.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · CHAPTER -->
+  <section class="slide dark chapter" data-theme="dark">
+    <div class="ghost">05</div>
+    <div class="inner">
+      <div class="reveal num">Capítulo 05</div>
+      <h2 class="reveal">Revisión del Informe de Utilidades</h2>
+      <div class="reveal tag">Análisis de Gross Profit y reporte financiero</div>
+    </div>
+  </section>
+
+  <!-- 11 · CONTENT -->
+  <section class="slide light content" data-theme="light">
+    <div class="reveal eyebrow"><span class="pin"></span>Informe de Utilidades</div>
+    <h3 class="reveal">Análisis de Gross Profit y reporte financiero</h3>
+    <div class="grid">
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><rect x="7" y="11" width="3" height="5"/><rect x="12" y="7" width="3" height="9"/><rect x="17" y="9" width="3" height="7"/></svg></div>
+        <h4>Importancia del análisis de GP</h4>
+        <p>El análisis del Gross Profit permite evaluar la rentabilidad y detectar desviaciones en los márgenes esperados de cada negocio.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2v20M7 5h7a3 3 0 0 1 0 6H7m0 0h8a3 3 0 0 1 0 6H6"/></svg></div>
+        <h4>Cálculo y significado del GP</h4>
+        <p>El GP se calcula restando costos directos de los ingresos, reflejando eficiencia operativa y precios correctos.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18M12 12l6-3"/></svg></div>
+        <h4>Análisis por negocio</h4>
+        <p>Evaluar el GP por cliente o proyecto ofrece una visión detallada para tomar decisiones financieras estratégicas.</p>
+      </div>
+      <div class="reveal card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5M12 8v4l3 2"/></svg></div>
+        <h4>Gestión y mejora continua</h4>
+        <p>El reporte de utilidades conecta operaciones diarias con objetivos estratégicos y mejora la sostenibilidad financiera.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · CHAPTER -->
+  <section class="slide dark chapter" data-theme="dark">
+    <div class="ghost">06</div>
+    <div class="inner">
+      <div class="reveal num">Capítulo 06</div>
+      <h2 class="reveal">Términos e Indicadores Clave</h2>
+      <div class="reveal tag">WIP · DSO · Provisiones</div>
+    </div>
+  </section>
+
+  <!-- 13 · CONTENT (indicators) -->
+  <section class="slide light content" data-theme="light">
+    <div class="reveal eyebrow"><span class="pin"></span>Indicadores Clave</div>
+    <h3 class="reveal">WIP, DSO y Provisiones</h3>
+    <div class="grid">
+      <div class="reveal card">
+        <span class="code">WIP</span>
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2v6l4 2"/><circle cx="12" cy="14" r="8"/></svg></div>
+        <h4>Significado de WIP</h4>
+        <p>Representa las ventas estimadas de trabajos realizados pero no facturados, mostrando ingresos en proceso.</p>
+      </div>
+      <div class="reveal card">
+        <span class="code">DSO</span>
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></div>
+        <h4>Importancia del DSO</h4>
+        <p>Mide los días promedio para cobrar facturas y refleja la eficiencia en la gestión de cartera.</p>
+      </div>
+      <div class="reveal card">
+        <span class="code">PROV.</span>
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v6c0 5 9 9 9 9s9-4 9-9V7z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <h4>Función de las provisiones</h4>
+        <p>Cubren pérdidas potenciales anticipadas para reflejar riesgos y la situación financiera real.</p>
+      </div>
+      <div class="reveal card">
+        <span class="code">KPI</span>
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></div>
+        <h4>Beneficios de entender los indicadores</h4>
+        <p>Conocer estos indicadores mejora la planificación financiera y facilita decisiones informadas.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- UI -->
+<div class="dots" id="dots"></div>
+<div class="counter"><span class="cur" id="cur">01</span> / <span id="tot">13</span></div>
+<div class="nav">
+  <button id="prev" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <button id="next" aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+  <button id="full" aria-label="Pantalla completa"><svg viewBox="0 0 24 24"><path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5"/></svg></button>
+</div>
+<div class="hint">← →  o haz clic para avanzar  ·  F = pantalla completa</div>
+<div class="zone l" id="zl"></div>
+<div class="zone r" id="zr"></div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const dotsBox=document.getElementById('dots');
+  const bar=document.getElementById('bar');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=String(slides.length).padStart(2,'0');
+  let i=0;
+
+  slides.forEach((_,n)=>{
+    const d=document.createElement('span');
+    if(n===0)d.className='on';
+    d.onclick=()=>go(n);
+    dotsBox.appendChild(d);
+  });
+  const dots=[...dotsBox.children];
+
+  function go(n){
+    n=Math.max(0,Math.min(slides.length-1,n));
+    slides[i].classList.remove('active');
+    slides[i].classList.add('past');
+    slides[n].classList.remove('past');
+    slides[n].classList.add('active');
+    dots[i].classList.remove('on');
+    dots[n].classList.add('on');
+    i=n;
+    cur.textContent=String(i+1).padStart(2,'0');
+    bar.style.width=((i)/(slides.length-1)*100)+'%';
+    // adapt nav UI color to slide theme
+    document.body.classList.toggle('light-ui', slides[i].dataset.theme==='light');
+  }
+  function next(){go(i+1)}
+  function prev(){go(i-1)}
+
+  document.getElementById('next').onclick=next;
+  document.getElementById('prev').onclick=prev;
+  document.getElementById('zr').onclick=next;
+  document.getElementById('zl').onclick=prev;
+  document.getElementById('full').onclick=()=>{
+    if(!document.fullscreenElement)document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  };
+
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();next()}
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();prev()}
+    else if(e.key==='Home')go(0);
+    else if(e.key==='End')go(slides.length-1);
+    else if(e.key.toLowerCase()==='f')document.getElementById('full').click();
+  });
+
+  // touch swipe
+  let x0=null;
+  addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});
+  addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50){dx<0?next():prev()}
+    x0=null;
+  },{passive:true});
+
+  bar.style.width='0%';
+</script>
+</body>
+</html>
